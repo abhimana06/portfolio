@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PortfolioAI — Resume to Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #050505;
+    --surface: #0d0d0d;
+    --elevated: #141414;
+    --border: rgba(201,168,76,0.15);
+    --gold: #C9A84C;
+    --gold-dim: rgba(201,168,76,0.4);
+    --cyan: #00D9FF;
+    --text: #E8E0D0;
+    --muted: #7a7468;
+    --danger: #FF4C4C;
+    --r: Cormorant Garant, Georgia, serif;
+    --s: Outfit, sans-serif;
+    --m: JetBrains Mono, monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--s);
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--gold);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    transform: translate(-50%, -50%);
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 34px; height: 34px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.35s cubic-bezier(0.23,1,0.32,1), opacity 0.15s ease;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.35;
+  }
+
+  /* Ambient glow blobs */
+  .ambient {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.07;
+  }
+  .ambient-1 { width: 600px; height: 600px; background: var(--gold); top: -200px; left: -200px; }
+  .ambient-2 { width: 500px; height: 500px; background: var(--cyan); bottom: -150px; right: -150px; }
+
+  /* Nav */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(5,5,5,0.95), transparent);
+    backdrop-filter: blur(6px);
+  }
+  .nav-logo {
+    font-family: var(--r);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--cyan); font-style: italic; }
+  .nav-badge {
+    font-family: var(--m);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 2px;
+  }
+
+  /* Main layout */
+  main {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 24px 80px;
+  }
+
+  /* Header */
+  .hero-eyebrow {
+    font-family: var(--m);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+  .hero-title {
+    font-family: var(--r);
+    font-size: clamp(48px, 8vw, 88px);
+    font-weight: 300;
+    line-height: 1.05;
+    text-align: center;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.35s forwards;
+  }
+  .hero-title em { color: var(--gold); font-style: italic; }
+  .hero-sub {
+    font-size: 16px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 480px;
+    margin-bottom: 64px;
+    line-height: 1.7;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.5s forwards;
+  }
+
+  /* Upload card */
+  .upload-card {
+    width: 100%;
+    max-width: 640px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.65s forwards;
+  }
+
+  /* States wrapper */
+  #state-upload,
+  #state-processing,
+  #state-done { display: none; }
+  #state-upload.active,
+  #state-processing.active,
+  #state-done.active { display: block; }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 64px 48px;
+    text-align: center;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(201,168,76,0.04) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .drop-zone:hover::before,
+  .drop-zone.drag-over::before { opacity: 1; }
+  .drop-zone:hover,
+  .drop-zone.drag-over {
+    border-color: var(--gold-dim);
+    background: var(--elevated);
+  }
+  .drop-zone.drag-over { border-color: var(--gold); }
+
+  /* Corner accents */
+  .drop-zone::after {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 24px; height: 24px;
+    border-top: 2px solid var(--gold);
+    border-left: 2px solid var(--gold);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .drop-zone:hover::after,
+  .drop-zone.drag-over::after { opacity: 1; }
+
+  .drop-icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 24px;
+    position: relative;
+  }
+  .drop-icon svg {
+    width: 100%; height: 100%;
+    stroke: var(--gold);
+    stroke-width: 1.5;
+    fill: none;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .drop-zone:hover .drop-icon svg { transform: translateY(-4px); }
+
+  .drop-label {
+    font-family: var(--r);
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .btn-browse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    font-family: var(--s);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: none;
+    border-radius: 2px;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-browse::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gold);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+  }
+  .btn-browse:hover::before { transform: scaleX(1); }
+  .btn-browse:hover { color: #050505; border-color: var(--gold); }
+  .btn-browse span { position: relative; z-index: 1; }
+
+  #file-input { display: none; }
+
+  .file-hint {
+    margin-top: 20px;
+    font-family: var(--m);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* Selected file indicator */
+  .file-selected {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding: 14px 20px;
+    background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 3px;
+  }
+  .file-selected.visible { display: flex; }
+  .file-icon { color: var(--gold); font-size: 18px; }
+  .file-name { font-family: var(--m); font-size: 12px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-clear { background: none; border: none; color: var(--muted); cursor: none; font-size: 16px; padding: 2px; transition: color 0.2s ease; }
+  .file-clear:hover { color: var(--danger); }
+
+  .btn-generate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px 32px;
+    background: var(--gold);
+    border: none;
+    color: #050505;
+    font-family: var(--s);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: none;
+    border-radius: 2px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    display: none;
+  }
+  .btn-generate.visible { display: flex; }
+  .btn-generate:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-generate:active { transform: translateY(0); }
+
+  /* Processing state */
+  .processing-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 64px 48px;
+    text-align: center;
+  }
+
+  .spinner-ring {
+    width: 72px; height: 72px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+  .spinner-ring::before,
+  .spinner-ring::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+  }
+  .spinner-ring::before {
+    border: 1px solid rgba(201,168,76,0.15);
+  }
+  .spinner-ring::after {
+    border: 2px solid transparent;
+    border-top-color: var(--gold);
+    border-right-color: var(--gold);
+    animation: spin 1s linear infinite;
+  }
+  .spinner-inner {
+    position: absolute;
+    inset: 10px;
+    border: 1px solid transparent;
+    border-bottom-color: var(--cyan);
+    border-left-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 1.5s linear infinite reverse;
+  }
+
+  .processing-label {
+    font-family: var(--r);
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .processing-status {
+    font-family: var(--m);
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    min-height: 20px;
+    transition: opacity 0.3s ease;
+  }
+
+  .steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-top: 40px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+  .step + .step::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    right: 100%;
+    width: 40px;
+    height: 1px;
+    background: var(--border);
+  }
+  .step + .step { margin-left: 40px; }
+  .step-dot {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--m);
+    font-size: 10px;
+    color: var(--muted);
+    transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+  }
+  .step-dot.active {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.1);
+    color: var(--gold);
+    box-shadow: 0 0 12px rgba(201,168,76,0.2);
+  }
+  .step-dot.done {
+    border-color: var(--cyan);
+    background: rgba(0,217,255,0.1);
+    color: var(--cyan);
+  }
+  .step-name { font-family: var(--m); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.3s ease; }
+  .step.active .step-name { color: var(--gold); }
+  .step.done .step-name { color: var(--cyan); }
+
+  /* Done state */
+  .done-wrap {
+    background: var(--surface);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    padding: 56px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .done-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .done-check {
+    width: 64px; height: 64px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  .done-check svg { width: 28px; height: 28px; stroke: var(--gold); stroke-width: 2; fill: none; }
+  .done-title {
+    font-family: var(--r);
+    font-size: 36px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .done-title em { color: var(--gold); font-style: italic; }
+  .done-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 40px;
+  }
+  .done-for {
+    font-family: var(--m);
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .done-name {
+    font-family: var(--r);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 32px;
+  }
+
+  .done-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    background: var(--gold);
+    border: none;
+    color: #050505;
+    font-family: var(--s);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: none;
+    border-radius: 2px;
+    text-decoration: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-2px); }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--s);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: none;
+    border-radius: 2px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+  }
+  .btn-secondary:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+  .btn-restart {
+    margin-top: 24px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--m);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: none;
+    padding: 8px;
+    transition: color 0.2s ease;
+  }
+  .btn-restart:hover { color: var(--text); }
+
+  /* Error toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #1a0a0a;
+    border: 1px solid rgba(255,76,76,0.3);
+    color: #ff8080;
+    font-family: var(--m);
+    font-size: 12px;
+    padding: 14px 24px;
+    border-radius: 3px;
+    z-index: 200;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+    opacity: 0;
+    max-width: 480px;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Feature strip */
+  .features {
+    display: flex;
+    gap: 24px;
+    margin-top: 48px;
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.85s forwards;
+  }
+  .feature-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .feature-chip span { color: var(--gold); font-size: 15px; }
+
+  /* Preview iframe */
+  #preview-frame {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+  }
+  #preview-frame.open { display: flex; }
+  .preview-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .preview-bar-title {
+    font-family: var(--m);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+  .btn-close-preview {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--m);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: none;
+    border-radius: 2px;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-close-preview:hover { color: var(--text); border-color: var(--gold-dim); }
+  #preview-iframe {
+    flex: 1;
+    border: none;
+    background: white;
+  }
+
+  /* Keyframes */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<nav>
+  <a href="#" class="nav-logo">Portfolio<span>AI</span></a>
+  <span class="nav-badge">Powered by Claude</span>
+</nav>
+
+<main>
+  <div class="hero-eyebrow">Resume → Portfolio in seconds</div>
+  <h1 class="hero-title">Your story,<br /><em>beautifully</em> told</h1>
+  <p class="hero-sub">Upload your resume and watch AI extract your experience, skills, and story — then forge it into a premium portfolio website.</p>
+
+  <div class="upload-card">
+
+    <!-- STATE: UPLOAD -->
+    <div id="state-upload" class="active">
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <polyline points="9 15 12 12 15 15" />
+          </svg>
+        </div>
+        <div class="drop-label">Drop your resume here</div>
+        <div class="drop-sub">PDF format — Claude reads everything:<br />formatting, tables, columns, all of it</div>
+        <button class="btn-browse" onclick="document.getElementById('file-input').click()">
+          <span>Browse files</span>
+        </button>
+        <div class="file-hint">PDF · Max 20MB</div>
+        <input type="file" id="file-input" accept=".pdf,application/pdf" />
+      </div>
+
+      <div class="file-selected" id="file-selected">
+        <span class="file-icon">⬡</span>
+        <span class="file-name" id="file-name-display"></span>
+        <button class="file-clear" id="file-clear" title="Remove">✕</button>
+      </div>
+
+      <button class="btn-generate" id="btn-generate">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Generate My Portfolio
+      </button>
+    </div>
+
+    <!-- STATE: PROCESSING -->
+    <div id="state-processing">
+      <div class="processing-wrap">
+        <div class="spinner-ring">
+          <div class="spinner-inner"></div>
+        </div>
+        <div class="processing-label">Working on it…</div>
+        <div class="processing-status" id="processing-status">Initializing</div>
+
+        <div class="steps">
+          <div class="step" id="step-0">
+            <div class="step-dot">01</div>
+            <div class="step-name">Upload</div>
+          </div>
+          <div class="step" id="step-1">
+            <div class="step-dot">02</div>
+            <div class="step-name">Extract</div>
+          </div>
+          <div class="step" id="step-2">
+            <div class="step-dot">03</div>
+            <div class="step-name">Generate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATE: DONE -->
+    <div id="state-done">
+      <div class="done-wrap">
+        <div class="done-check">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <div class="done-title">Portfolio <em>ready</em></div>
+        <div class="done-sub">Your premium portfolio has been generated.</div>
+        <div class="done-for">Generated for</div>
+        <div class="done-name" id="done-name"></div>
+        <div class="done-actions">
+          <a href="#" id="btn-download" class="btn-primary" download>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download HTML
+          </a>
+          <button class="btn-secondary" id="btn-preview">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview
+          </button>
+        </div>
+        <button class="btn-restart" id="btn-restart">↩ Generate another</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="features">
+    <div class="feature-chip"><span>◈</span> Claude Opus 4 AI</div>
+    <div class="feature-chip"><span>◈</span> Instant generation</div>
+    <div class="feature-chip"><span>◈</span> Self-contained HTML</div>
+    <div class="feature-chip"><span>◈</span> Dark luxury design</div>
+  </div>
+</main>
+
+<!-- Preview overlay -->
+<div id="preview-frame">
+  <div class="preview-bar">
+    <span class="preview-bar-title">Portfolio Preview</span>
+    <button class="btn-close-preview" id="btn-close-preview">✕ Close</button>
+  </div>
+  <iframe id="preview-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
+
+<!-- Error toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  (function lerp() {
+    rx += (mx - rx) * 0.18;
+    ry += (my - ry) *.18;
+    cursor.style.left = mx + 'px';
+    cursor.style.top = my + 'px';
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(lerp);
+  })();
+  document.querySelectorAll('a,button,.drop-zone').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.style.transform = 'translate(-50%,-50%) scale(2)'; ring.style.transform = 'translate(-50%,-50%) scale(1.5)'; });
+    el.addEventListener('mouseleave', () => { cursor.style.transform = 'translate(-50%,-50%) scale(1)'; ring.style.transform = 'translate(-50%,-50%) scale(1)'; });
+  });
+
+  // State machine
+  let selectedFile = null;
+  let generatedHTML = null;
+  let generatedBlob = null;
+
+  function showState(id) {
+    ['state-upload','state-processing','state-done'].forEach(s => {
+      document.getElementById(s).classList.remove('active');
+    });
+    document.getElementById(id).classList.add('active');
+  }
+
+  function showToast(msg, duration = 5000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  // File input
+  const fileInput = document.getElementById('file-input');
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+  function setFile(file) {
+    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+      showToast('Please upload a PDF file.'); return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('File exceeds 20 MB limit.'); return;
+    }
+    selectedFile = file;
+    document.getElementById('file-name-display').textContent = file.name;
+    document.getElementById('file-selected').classList.add('visible');
+    document.getElementById('btn-generate').classList.add('visible');
+  }
+
+  document.getElementById('file-clear').addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    document.getElementById('file-selected').classList.remove('visible');
+    document.getElementById('btn-generate').classList.remove('visible');
+  });
+
+  // Drag and drop
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+
+  // Steps
+  function setStep(active) {
+    for (let i = 0; i < 3; i++) {
+      const el = document.getElementById('step-' + i);
+      const dot = el.querySelector('.step-dot');
+      el.classList.remove('active', 'done');
+      dot.classList.remove('active', 'done');
+      if (i < active) { el.classList.add('done'); dot.classList.add('done'); dot.textContent = '✓'; }
+      else if (i === active) { el.classList.add('active'); dot.classList.add('active'); }
+    }
+  }
+
+  const statusMessages = [
+    ['Uploading resume to Claude…', 0],
+    ['Reading your resume…', 1],
+    ['Extracting experience & skills…', 1],
+    ['Generating your portfolio…', 2],
+    ['Applying dark luxury design…', 2],
+    ['Finalizing…', 2],
+  ];
+
+  let statusInterval = null;
+  function startStatusCycle() {
+    let i = 0;
+    setStep(0);
+    document.getElementById('processing-status').textContent = statusMessages[0][0];
+    statusInterval = setInterval(() => {
+      i = Math.min(i + 1, statusMessages.length - 1);
+      const [msg, step] = statusMessages[i];
+      document.getElementById('processing-status').textContent = msg;
+      setStep(step);
+    }, 2200);
+  }
+  function stopStatusCycle() { clearInterval(statusInterval); }
+
+  // Generate
+  document.getElementById('btn-generate').addEventListener('click', async () => {
+    if (!selectedFile) return;
+    showState('state-processing');
+    startStatusCycle();
+
+    const form = new FormData();
+    form.append('resume', selectedFile);
+
+    try {
+      const res = await fetch('/generate', { method: 'POST', body: form });
+      const data = await res.json();
+      stopStatusCycle();
+
+      if (!res.ok || data.error) {
+        showState('state-upload');
+        showToast(data.error || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      generatedHTML = data.html;
+      const name = data.name || 'Your Portfolio';
+
+      // Prepare download blob
+      generatedBlob = new Blob([generatedHTML], { type: 'text/html' });
+      const url = URL.createObjectURL(generatedBlob);
+      const safeName = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const link = document.getElementById('btn-download');
+      link.href = url;
+      link.download = `${safeName}-portfolio.html`;
+
+      document.getElementById('done-name').textContent = name;
+      showState('state-done');
+
+    } catch (err) {
+      stopStatusCycle();
+      showState('state-upload');
+      showToast('Network error — is the server running?');
+    }
+  });
+
+  // Preview
+  document.getElementById('btn-preview').addEventListener('click', () => {
+    if (!generatedHTML) return;
+    const iframe = document.getElementById('preview-iframe');
+    iframe.srcdoc = generatedHTML;
+    document.getElementById('preview-frame').classList.add('open');
+  });
+  document.getElementById('btn-close-preview').addEventListener('click', () => {
+    document.getElementById('preview-frame').classList.remove('open');
+  });
+
+  // Restart
+  document.getElementById('btn-restart').addEventListener('click', () => {
+    selectedFile = null;
+    generatedHTML = null;
+    fileInput.value = '';
+    document.getElementById('file-selected').classList.remove('visible');
+    document.getElementById('btn-generate').classList.remove('visible');
+    showState('state-upload');
+  });
+</script>
+</body>
+</html>
